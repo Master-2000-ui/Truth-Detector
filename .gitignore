@@ -1,4 +1,7 @@
 passwords.txt
+.env
+.env.*
+!.env.example
 reports/
 locks/
 *.csv
