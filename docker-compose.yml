@@ -18,6 +18,9 @@ services:
       - /tmp:rw,noexec,nosuid,nodev,size=16m
     volumes:
       - ./passwords.txt:/data/passwords.txt:ro
+      - ./credentials:/data/credentials:ro
+      - ./messages:/data/messages:ro
+      - ./images:/data/images:ro
       - ./reports:/reports
       - ./locks:/tmp/password-auditor-locks
     command: ["/data/passwords.txt", "--format", "json", "--output", "/reports/audit.json"]

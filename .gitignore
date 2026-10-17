@@ -1,4 +1,7 @@
 passwords.txt
+credentials/
+messages/
+images/
 .env
 .env.*
 !.env.example

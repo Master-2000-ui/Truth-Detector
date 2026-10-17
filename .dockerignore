@@ -1,5 +1,8 @@
 # Keep credentials and generated reports outside the image build context.
 passwords.txt
+credentials/
+messages/
+images/
 .env
 .env.*
 !.env.example
