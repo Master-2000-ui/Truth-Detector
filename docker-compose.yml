@@ -19,6 +19,7 @@ services:
     volumes:
       - ./passwords.txt:/data/passwords.txt:ro
       - ./reports:/reports
+      - ./locks:/tmp/password-auditor-locks
     command: ["/data/passwords.txt", "--format", "json", "--output", "/reports/audit.json"]
 
   auditor-via-gateway:

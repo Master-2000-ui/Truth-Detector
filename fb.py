@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import csv
+import fcntl
 import getpass
 import hashlib
 import hmac
@@ -13,6 +14,7 @@ import json
 import os
 import re
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TextIO
 
@@ -29,6 +31,21 @@ COMMON_PASSWORDS = {
 }
 
 
+LOCK_DIR = Path(os.environ.get("LOCK_DIR", "/tmp/password-auditor-locks"))
+
+
+@contextmanager
+def file_lock(resource: Path, exclusive: bool = False):
+    """Hold an advisory process lock for a resource."""
+    LOCK_DIR.mkdir(parents=True, exist_ok=True)
+    lock_name = hashlib.sha256(str(resource.absolute()).encode("utf-8")).hexdigest() + ".lock"
+    lock_path = LOCK_DIR / lock_name
+    with lock_path.open("w", encoding="ascii") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 HASH_PREFIX = "scrypt$"
 
 
@@ -84,17 +101,18 @@ def audit_password_file(path: Path) -> tuple[int, int, dict[str, int]]:
         raise FileNotFoundError(path)
     total = compliant = 0
     issue_counts: dict[str, int] = {}
-    with path.open("r", encoding="utf-8", errors="replace") as password_file:
-        for raw_password in password_file:
-            password = raw_password.rstrip("\r\n")
-            if not password:
-                continue
-            total += 1
-            issues = password_issues(password)
-            if not issues:
-                compliant += 1
-            for issue in issues:
-                issue_counts[issue] = issue_counts.get(issue, 0) + 1
+    with file_lock(path):
+        with path.open("r", encoding="utf-8", errors="replace") as password_file:
+            for raw_password in password_file:
+                password = raw_password.rstrip("\r\n")
+                if not password:
+                    continue
+                total += 1
+                issues = password_issues(password)
+                if not issues:
+                    compliant += 1
+                for issue in issues:
+                    issue_counts[issue] = issue_counts.get(issue, 0) + 1
     return total, compliant, issue_counts
 
 
@@ -160,8 +178,9 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"password file not found: {args.password_file}")
     report = report_data(total, compliant, issues)
     if args.output:
-        with args.output.open("w", encoding="utf-8", newline="") as output:
-            write_report(output, report, args.format)
+        with file_lock(args.output, exclusive=True):
+            with args.output.open("w", encoding="utf-8", newline="") as output:
+                write_report(output, report, args.format)
     else:
         write_report(sys.stdout, report, args.format)
     return 0

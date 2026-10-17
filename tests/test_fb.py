@@ -3,6 +3,7 @@ import json
 import pytest
 
 from fb import (
+    LOCK_DIR,
     audit_password_file,
     hash_password,
     main,
@@ -30,6 +31,13 @@ def test_hash_and_verify_password():
 
 def test_strong_password_has_no_issues():
     assert password_issues("LongEnough!42") == []
+
+
+def test_file_lock_directory_created(tmp_path):
+    password_file = tmp_path / "locked-passwords.txt"
+    password_file.write_text("LongEnough!42\n", encoding="utf-8")
+    audit_password_file(password_file)
+    assert LOCK_DIR.exists()
 
 
 def test_audit_ignores_blank_lines(tmp_path):
