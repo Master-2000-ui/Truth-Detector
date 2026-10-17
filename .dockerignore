@@ -1,0 +1,12 @@
+# Keep credentials and generated reports outside the image build context.
+passwords.txt
+*.csv
+*.json
+.git
+.gitignore
+README.md
+Screenshots
+fb2.py
+__pycache__
+.pytest_cache
+.DS_Store
